@@ -1,21 +1,32 @@
 import React, { useState } from "react";
 import CryptoJS from "crypto-js";
 import didJWT from "did-jwt";
+import signChunks from "../helpers/signChunks";
+import Panel from "../components/Panel";
+import Row from "../components/Row";
 
 export default function Sign() {
   const [hash, setHash] = useState("");
   const [progress, setProgress] = useState("");
-  const [did, setDid] = useState("");
-  const [privateKey, setPrivateKey] = useState("");
+  const [credential, setCredential] = useState(null);
+  const [link, setLink] = useState("");
   const [jwt, setJWT] = useState("");
+
+  function onChangeLink(event) {
+    let url = event.target.value;
+    if (!url.includes("https://") && !url.includes("http://")) {
+      url = "https://" + url;
+    }
+    setLink(url);
+    setJWT("");
+  }
 
   function onCredentialsFileChange(event) {
     const file = event.target.files[0];
     const reader = new FileReader();
     reader.onload = function (evt) {
       const result = JSON.parse(reader.result);
-      setDid(result.did);
-      setPrivateKey(result.privateKey);
+      setCredential(result);
     };
     reader.readAsText(file);
   }
@@ -25,7 +36,7 @@ export default function Sign() {
     const file = event.target.files[0];
     const SHA256 = CryptoJS.algo.SHA256.create();
     let counter = 0;
-    loading(
+    signChunks(
       file,
       function (data) {
         const wordBuffer = CryptoJS.lib.WordArray.create(data);
@@ -47,12 +58,12 @@ export default function Sign() {
   }
 
   async function createJWT() {
-    const signer = didJWT.SimpleSigner(privateKey);
+    const signer = didJWT.SimpleSigner(credential.privateKey);
     let jwt = await didJWT.createJWT(
-      { hash },
+      { hash, link },
       {
         alg: "ES256K",
-        issuer: did,
+        issuer: credential.did,
         signer,
       }
     );
@@ -78,144 +89,61 @@ export default function Sign() {
     <>
       <h2>Firma de archivo</h2>
       <div>
-        <div>
-          Credenciales:{" "}
-          <input type="file" onChange={onCredentialsFileChange} accept=".did" />
-          {did && privateKey && (
+        <Panel>
+          <h3>1. Ingresa tus credenciales</h3>
+          {!credential && (
+            <input
+              type="file"
+              onChange={onCredentialsFileChange}
+              accept=".did"
+            />
+          )}
+          {credential && (
             <>
-              <hr></hr>
-              <div>DID: {did}</div>
-              <div>Clave privada: {privateKey}</div>
+              <Row title="Nombre:">{credential.name}</Row>
+              <Row title="Fecha de creación:">
+                {new Date(credential.date).toString()}
+              </Row>
+              <Row title="DID:">{credential.did}</Row>
+              <Row title="Clave privada:">{credential.privateKey}</Row>
             </>
           )}
-        </div>
-        <hr></hr>
-        <div>
-          Archivo a firmar: <input type="file" onChange={onToSignFileChange} />
-        </div>
-        <hr></hr>
-        <div>Hash: {hash || "-"}</div>
-        <div>Progreso: {progress || "0%"}</div>
-        <hr></hr>
-        {hash !== "" && did !== "" && (
-          <>
-            <button onClick={createJWT}>Firmar</button>
-            <div style={{ overflowWrap: "break-word" }}>
-              {jwt && <span>JWT: {jwt}</span>}
-            </div>
-            {jwt && <button onClick={downloadJWT}>Descargar JWT</button>}
-          </>
+        </Panel>
+        {credential && (
+          <Panel>
+            <h3>2. Ingresa el archivo a firmar</h3>
+            <input type="file" onChange={onToSignFileChange} />
+            <hr></hr>
+            <div>Hash: {hash || "-"}</div>
+            <div>Progreso: {progress || "0%"}</div>
+          </Panel>
+        )}
+        {hash && (
+          <Panel>
+            <h3>3. Ingresa un link al archivo</h3>
+            <input type="url" onChange={onChangeLink} />
+            <hr></hr>
+            <Row title="Link:">
+              <a href={link} target="_blank" rel="noreferrer">
+                {link}
+              </a>
+            </Row>
+          </Panel>
+        )}
+        {link && (
+          <Panel>
+            <h3>4. Crear documento de firma</h3>
+            {!jwt && <button onClick={createJWT}>Firmar</button>}
+            {jwt && (
+              <>
+                <Row title="JWT:">{jwt}</Row>
+                <hr></hr>
+                <button onClick={downloadJWT}>Descargar JWT</button>
+              </>
+            )}
+          </Panel>
         )}
       </div>
     </>
   );
-}
-
-function loading(file, callbackProgress, callbackFinal) {
-  let chunkSize = 1024 * 1024; // bytes
-  let offset = 0;
-  let size = chunkSize;
-  let partial;
-  let index = 0;
-  let lastOffset = 0;
-  let chunkTotal = 0;
-  let previous = [];
-  let chunkReorder = 0;
-
-  if (file.size === 0) {
-    callbackFinal();
-  }
-  while (offset < file.size) {
-    partial = file.slice(offset, offset + size);
-    let reader = new FileReader();
-    reader.size = chunkSize;
-    reader.offset = offset;
-    reader.index = index;
-    reader.onload = function (evt) {
-      callbackRead_buffered(reader, file, evt, callbackProgress, callbackFinal);
-    };
-    reader.readAsArrayBuffer(partial);
-    offset += chunkSize;
-    index += 1;
-  }
-  function callbackRead_buffered(
-    reader,
-    file,
-    evt,
-    callbackProgress,
-    callbackFinal
-  ) {
-    chunkTotal++;
-
-    if (lastOffset !== reader.offset) {
-      // out of order
-      console.log(
-        "[",
-        reader.size,
-        "]",
-        reader.offset,
-        "->",
-        reader.offset + reader.size,
-        ">>buffer"
-      );
-      previous.push({
-        offset: reader.offset,
-        size: reader.size,
-        result: reader.result,
-      });
-      chunkReorder++;
-      return;
-    }
-
-    function parseResult(offset, size, result) {
-      lastOffset = offset + size;
-      callbackProgress(result);
-      if (offset + size >= file.size) {
-        lastOffset = 0;
-        callbackFinal();
-      }
-    }
-
-    // in order
-    console.log(
-      "[",
-      reader.size,
-      "]",
-      reader.offset,
-      "->",
-      reader.offset + reader.size,
-      ""
-    );
-    parseResult(reader.offset, reader.size, reader.result);
-
-    // resolve previous buffered
-    var buffered = [{}];
-    while (buffered.length > 0) {
-      buffered = previous.filter(function (item) {
-        return item.offset === lastOffset;
-      });
-      buffered.forEach(function (item) {
-        console.log(
-          "[",
-          item.size,
-          "]",
-          item.offset,
-          "->",
-          item.offset + item.size,
-          "<<buffer"
-        );
-        parseResult(item.offset, item.size, item.result);
-        remove(previous, item);
-      });
-    }
-  }
-}
-
-function remove(arr, item) {
-  var i = arr.length;
-  while (i--) {
-    if (arr[i] === item) {
-      arr.splice(i, 1);
-    }
-  }
 }

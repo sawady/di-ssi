@@ -1,0 +1,9 @@
+.row {
+  margin: 5px 0px;
+  overflow-wrap: break-word;
+}
+
+.row_title {
+  font-weight: bold;
+  margin-right: 5px;
+}
