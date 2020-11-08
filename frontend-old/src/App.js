@@ -4,13 +4,17 @@ import Nav from "./components/Nav";
 import Routes from "./Routes";
 import "./App.css";
 
+import { UserProvider } from "./hooks/useUser";
+
 export default function App() {
   return (
-    <Router>
-      <div className="App">
-        <Nav />
-        <Routes />
-      </div>
-    </Router>
+    <UserProvider>
+      <Router>
+        <div className="App">
+          <Nav />
+          <Routes />
+        </div>
+      </Router>
+    </UserProvider>
   );
 }
