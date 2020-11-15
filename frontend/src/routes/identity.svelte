@@ -55,6 +55,7 @@
           email,
           did,
           privateKey,
+          password,
           date: Date.now(),
         }),
         headers: {

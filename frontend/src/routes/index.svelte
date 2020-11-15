@@ -77,7 +77,9 @@
   <title>di-ssi</title>
 </svelte:head>
 
-<h1>¡Bienvenido a di-ssi!</h1>
+{#if !$user}
+  <h1>¡Bienvenido a di-ssi!</h1>
+{/if}
 
 {#if !$user}
   <Panel title="Login / Registro">
@@ -87,13 +89,28 @@
     </div>
     <div class="line" />
     <div class="section">
-      <div style="margin-bottom: 15px">o ingresa email y password</div>
-      <div style="margin-bottom: 15px">email: <input type="text" bind:value={email} /></div>
-      <div style="margin-bottom: 15px">password: <input type="password" bind:value={password} /></div>
+      <div style="margin-bottom: 15px">
+        o ingresa
+        <strong>email</strong>
+        y
+        <strong>password</strong>
+        si tienes cuenta
+      </div>
+      <div style="margin-bottom: 15px">
+        email:
+        <input type="text" bind:value={email} />
+      </div>
+      <div style="margin-bottom: 15px">
+        password:
+        <input type="password" bind:value={password} />
+      </div>
       <Button on:click={importCredential}>enviar</Button>
     </div>
     <div class="line" />
-    <div class="section">o genera una <a href="identity">nueva credencial</a></div>
+    <div class="section">
+      o genera una
+      <a href="identity">nueva credencial</a>
+    </div>
   </Panel>
 {/if}
 

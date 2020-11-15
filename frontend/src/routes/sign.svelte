@@ -69,6 +69,21 @@
   }
 </script>
 
+<style>
+  input {
+    border: 1px solid #ccc !important;
+    border-radius: 4px;
+    width: 90%;
+    padding: 8px;
+    display: block;
+  }
+
+  input:hover {
+    border: 1px solid orange !important;
+    border-radius: 4px;
+  }
+</style>
+
 <svelte:head>
   <title>Firma</title>
 </svelte:head>
