@@ -12,6 +12,8 @@
   let uploaded = false;
   let email = "";
   let invalidEmail = false;
+  let password = "";
+  let uploadedResult;
 
   const regex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
 
@@ -37,17 +39,44 @@
     link.href = href;
     link.download = name + ".did";
     document.body.appendChild(link);
-    link.click();
+    // link.click();
     document.body.removeChild(link);
     guardado = true;
   }
 
   async function uploadCredential() {
+    uploadedResult = null;
     uploading = true;
     uploaded = false;
-    await new Promise((resolve) => {
-      setTimeout(() => resolve(null), 2000);
-    });
+    try {
+      const res = await fetch("http://localhost:8080/auth/credential/save", {
+        method: "POST",
+        body: JSON.stringify({
+          email,
+          did,
+          privateKey,
+          date: Date.now(),
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      console.log(res);
+      if (!res.ok) {
+        const result = await res.json();
+        throw new Error(result.error);
+      }
+      uploadedResult = {
+        sucess: true,
+        message: "¡Almacenado! 👌",
+      };
+    } catch (e) {
+      console.log(e);
+      uploadedResult = {
+        sucess: false,
+        message: e.message,
+      };
+    }
     uploading = false;
     uploaded = true;
   }
@@ -113,14 +142,19 @@
 
 {#if guardado}
   <Panel title="4. ¿Deseas almacenar la credencial en el servidor?">
-    {#if !uploaded && !uploading}
+    <strong>Password para encriptar: </strong>
+    <p><input type="password" bind:value={password} /></p>
+    {#if password && !uploaded && !uploading}
       <Button on:click={uploadCredential}>Subir</Button>
     {/if}
     {#if uploading}
       <Loader />
     {/if}
-    {#if uploaded}
-      <h4>¡Almacenado! 👌</h4>
+    {#if uploaded && uploadedResult}
+      <h4>{uploadedResult.message}</h4>
+    {/if}
+    {#if uploadedResult && !uploadedResult.sucess}
+      <Button on:click={uploadCredential}>Reintentar</Button>
     {/if}
   </Panel>
 {/if}

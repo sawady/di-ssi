@@ -45,7 +45,7 @@
 
   async function createJWT() {
     const signer = didJWT.SimpleSigner($user.privateKey);
-    let resultJWT = await didJWT.createJWT(
+    const resultJWT = await didJWT.createJWT(
       { hash, link },
       {
         alg: "ES256K",
@@ -53,7 +53,6 @@
         signer,
       }
     );
-    console.log(resultJWT);
     jwt = resultJWT;
   }
 
